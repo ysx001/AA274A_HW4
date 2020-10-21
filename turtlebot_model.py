@@ -19,7 +19,7 @@ def compute_dynamics(xvec, u, dt, compute_jacobians=True):
     # TODO: Compute g, Gx, Gu
     # HINT: To compute the new state g, you will need to integrate the dynamics of x, y, theta
     # HINT: Since theta is changing with time, try integrating x, y wrt d(theta) instead of dt by introducing om
-    # HINT: When om < EPSILON_OMEGA, assume that the theta stays approximately constant ONLY for calculating the next x, y
+    # HINT: When abs(om) < EPSILON_OMEGA, assume that the theta stays approximately constant ONLY for calculating the next x, y
     #       New theta should not be equal to theta. Jacobian with respect to om is not 0.
 
 
@@ -49,8 +49,12 @@ def transform_line_to_scanner_frame(line, x, tf_base_to_camera, compute_jacobian
 
     ########## Code starts here ##########
     # TODO: Compute h, Hx
-    # HINT: To calculate the pose of the camera in the world frame, a rotation matrix may be useful.
-    # HINT: To convert r from the world frame to the camera frame, draw a diagram. A projection may be useful.
+    # HINT: Calculate the pose of the camera in the world frame (x_cam, y_cam, th_cam), a rotation matrix may be useful.
+    # HINT: To compute line parameters in the camera frame h = (alpha_in_cam, r_in_cam), 
+    #       draw a diagram with a line parameterized by (alpha,r) in the world frame and 
+    #       a camera frame with origin at x_cam, y_cam rotated by th_cam wrt to the world frame
+    # HINT: What is the projection of the camera location (x_cam, y_cam) on the line r? 
+    # HINT: To find Hx, write h in terms of the pose of the base in world frame (x_base, y_base, th_base)
 
 
     ########## Code ends here ##########
