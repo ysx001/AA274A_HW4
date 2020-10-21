@@ -153,6 +153,8 @@ class EkfLocalization(Ekf):
 
         ########## Code starts here ##########
         # TODO: Compute z, Q.
+        # HINT: The scipy.linalg.block_diag() function may be useful.
+        # HINT: A list can be unpacked using the * (splat) operator. 
 
 
         ########## Code ends here ##########
@@ -195,6 +197,12 @@ class EkfLocalization(Ekf):
 
         ########## Code starts here ##########
         # TODO: Compute v_list, Q_list, H_list
+        # HINT: hs contains the J predicted lines, z_raw contains the I observed lines
+        # HINT: To calculate the innovation for alpha, use angle_diff() instead of plain subtraction
+        # HINT: Optionally, efficiently calculate all the innovations in a matrix V of shape [I, J, 2]. np.expand_dims() and np.dstack() may be useful.
+        # HINT: For each of the I observed lines, 
+        #       find the closest predicted line and the corresponding minimum Mahalanobis distance
+        #       if the minimum distance satisfies the gating criteria, add corresponding entries to v_list, Q_list, H_list
 
 
         ########## Code ends here ##########
@@ -217,7 +225,8 @@ class EkfLocalization(Ekf):
         Hx_list = []
         for j in range(self.map_lines.shape[1]):
             ########## Code starts here ##########
-            # TODO: Compute h, Hx using tb.transform_line_to_scanner_frame().
+            # TODO: Compute h, Hx using tb.transform_line_to_scanner_frame() for the j'th map line.
+            # HINT: This should be a single line of code.
 
 
             ########## Code ends here ##########

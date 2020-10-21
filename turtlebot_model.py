@@ -2,21 +2,25 @@ import numpy as np
 
 EPSILON_OMEGA = 1e-3
 
-def compute_dynamics(x, u, dt, compute_jacobians=True):
+def compute_dynamics(xvec, u, dt, compute_jacobians=True):
     """
     Compute Turtlebot dynamics (unicycle model).
 
     Inputs:
-                        x: np.array[3,] - Turtlebot state (x, y, theta).
+                     xvec: np.array[3,] - Turtlebot state (x, y, theta).
                         u: np.array[2,] - Turtlebot controls (V, omega).
         compute_jacobians: bool         - compute Jacobians Gx, Gu if true.
     Outputs:
          g: np.array[3,]  - New state after applying u for dt seconds.
-        Gx: np.array[3,3] - Jacobian of g with respect to x.
-        Gu: np.array[3,2] - Jacobian of g with respect ot u.
+        Gx: np.array[3,3] - Jacobian of g with respect to xvec.
+        Gu: np.array[3,2] - Jacobian of g with respect to u.
     """
     ########## Code starts here ##########
     # TODO: Compute g, Gx, Gu
+    # HINT: To compute the new state g, you will need to integrate the dynamics of x, y, theta
+    # HINT: Since theta is changing with time, try integrating x, y wrt d(theta) instead of dt by introducing om
+    # HINT: When om < EPSILON_OMEGA, assume that the theta stays approximately constant ONLY for calculating the next x, y
+    #       New theta should not be equal to theta. Jacobian with respect to om is not 0.
 
 
     ########## Code ends here ##########
@@ -45,6 +49,8 @@ def transform_line_to_scanner_frame(line, x, tf_base_to_camera, compute_jacobian
 
     ########## Code starts here ##########
     # TODO: Compute h, Hx
+    # HINT: To calculate the pose of the camera in the world frame, a rotation matrix may be useful.
+    # HINT: To convert r from the world frame to the camera frame, draw a diagram. A projection may be useful.
 
 
     ########## Code ends here ##########
