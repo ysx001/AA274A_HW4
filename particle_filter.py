@@ -50,7 +50,7 @@ class ParticleFilter(object):
         Performs the transition update step by updating self.xs.
 
         Inputs:
-             u: np.array[2,] - zero-order hold control input.
+            u: np.array[2,] - zero-order hold control input.
             dt: float        - duration of discrete time step.
         Output:
             None - internal belief state (self.xs) should be updated.
@@ -58,6 +58,7 @@ class ParticleFilter(object):
         ########## Code starts here ##########
         # TODO: Update self.xs.
         # Hint: Call self.transition_model().
+        # Hint: You may find np.random.multivariate_normal useful.
 
 
         ########## Code ends here ##########
@@ -169,11 +170,17 @@ class MonteCarloLocalization(ParticleFilter):
         ########## Code starts here ##########
         # TODO: Compute g.
         # Hint: We don't need Jacobians for particle filtering.
+        # Hint: A simple solution can be using a for loop for each partical
+        #       and a call to tb.compute_dynamics
         # Hint: To maximize speed, try to compute the dynamics without looping
         #       over the particles. If you do this, you should implement
         #       vectorized versions of the dynamics computations directly here
         #       (instead of modifying turtlebot_model). This results in a
         #       ~10x speedup.
+        # Hint: This faster/better solution does not use loop and does 
+        #       not call tb.compute_dynamics. You need to compute the idxs
+        #       where abs(om) > EPSILON_OMEGA and the other idxs, then do separate 
+        #       updates for them
 
 
         ########## Code ends here ##########
@@ -201,6 +208,7 @@ class MonteCarloLocalization(ParticleFilter):
         # Hint: To maximize speed, implement this without looping over the
         #       particles. You may find scipy.stats.multivariate_normal.pdf()
         #       useful.
+        # Hint: You'll need to call self.measurement_model()
 
 
         ########## Code ends here ##########
@@ -225,6 +233,7 @@ class MonteCarloLocalization(ParticleFilter):
 
         ########## Code starts here ##########
         # TODO: Compute Q.
+        # Hint: You might find scipy.linalg.block_diag() useful
 
 
         ########## Code ends here ##########
@@ -261,6 +270,9 @@ class MonteCarloLocalization(ParticleFilter):
 
         ########## Code starts here ##########
         # TODO: Compute vs (with shape [M x I x 2]).
+        # Hint: Simple solutions: Using for loop, for each particle, for each 
+        #       observed line, find the most likely map entry (the entry with 
+        #       least Mahalanobis distance).
         # Hint: To maximize speed, try to eliminate all for loops, or at least
         #       for loops over J. It is possible to solve multiple systems with
         #       np.linalg.solve() and swap arbitrary axes with np.transpose().
@@ -268,6 +280,8 @@ class MonteCarloLocalization(ParticleFilter):
         #       Eliminating loops over I results in a ~2x speedup.
         #       Eliminating loops over M results in a ~5x speedup.
         #       Overall, that's 100x!
+        # Hint: For the faster solution, you might find np.expand_dims(), 
+        #       np.linalg.solve(), np.meshgrid() useful.
 
 
         ########## Code ends here ##########
@@ -289,10 +303,15 @@ class MonteCarloLocalization(ParticleFilter):
         ########## Code starts here ##########
         # TODO: Compute hs.
         # Hint: We don't need Jacobians for particle filtering.
+        # Hint: Simple solutions: Using for loop, for each particle, for each 
+        #       map line, transform to scanner frmae using tb.transform_line_to_scanner_frame()
+        #       and tb.normalize_line_parameters()
         # Hint: To maximize speed, try to compute the predicted measurements
         #       without looping over the map lines. You can implement vectorized
-        #       versions of turtlebod_model functions directly here. This
+        #       versions of turtlebot_model functions directly here. This
         #       results in a ~10x speedup.
+        # Hint: For the faster solution, it does not call tb.transform_line_to_scanner_frame()
+        #       or tb.normalize_line_parameters(), but reimplement these steps vectorized.
 
 
         ########## Code ends here ##########
