@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.linalg    # you may find scipy.linalg.block_diag useful
-import turtlebot_model as tb
+from . import turtlebot_model as tb
 
 class Ekf(object):
     """

@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.linalg  # You may find scipy.linalg.block_diag useful
 import scipy.stats  # You may find scipy.stats.multivariate_normal.pdf useful
-import turtlebot_model as tb
+from . import turtlebot_model as tb
 
 EPSILON_OMEGA = 1e-3
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
 import numpy.linalg
@@ -28,7 +28,7 @@ EKF_PICKLE = "ekf_validation.pickle"
 def load_pickle(fname):
     import pickle
     with open(fname, "rb") as f:
-        return pickle.load(f)
+        return pickle.load(f, encoding='latin1')
 
 ### PROBLEM 1
 
