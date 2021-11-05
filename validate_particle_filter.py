@@ -4,10 +4,10 @@ import numpy as np
 import numpy.linalg
 import scipy.linalg
 import matplotlib.pyplot as plt
-from ExtractLines import ExtractLines
-import maze_sim_parameters as params
-from particle_filter import MonteCarloLocalization
-from ekf import EkfLocalization
+from HW4.ExtractLines import ExtractLines
+import HW4.maze_sim_parameters as params
+from HW4.particle_filter import MonteCarloLocalization
+from HW4.ekf import EkfLocalization
 from validate_ekf import validate_ekf_transition_update
 import pickle
 

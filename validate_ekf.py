@@ -4,9 +4,9 @@ import numpy as np
 import numpy.linalg
 import scipy.linalg
 import matplotlib.pyplot as plt
-from ExtractLines import ExtractLines
-import maze_sim_parameters as params
-from ekf import EkfLocalization, EkfSlam
+from HW4.ExtractLines import ExtractLines
+import HW4.maze_sim_parameters as params
+from HW4.ekf import EkfLocalization, EkfSlam
 
 ### PARAMETERS ASSOCIATED WITH `validation_run.pickle`
 
