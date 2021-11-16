@@ -21,8 +21,53 @@ def compute_dynamics(xvec, u, dt, compute_jacobians=True):
     # HINT: Since theta is changing with time, try integrating x, y wrt d(theta) instead of dt by introducing om
     # HINT: When abs(om) < EPSILON_OMEGA, assume that the theta stays approximately constant ONLY for calculating the next x, y
     #       New theta should not be equal to theta. Jacobian with respect to om is not 0.
+    V, om = u[0], u[1]
+    x_prev, y_prev, th_prev = xvec[0], xvec[1], xvec[2]
+    
+    if abs(om) < EPSILON_OMEGA:
+        # use limit of omega goes to 0
+        # compute g
+        th = th_prev + om * dt
+        sin_t = np.sin(th_prev) + np.sin(th)
+        cos_t = np.cos(th_prev) + np.cos(th)
+        x = x_prev + 0.5 * V * cos_t * dt
+        y = y_prev + 0.5 * V * sin_t * dt
+        # compute Gx -> (3, 3)
+        Gx = [[1, 0, -0.5 * V * sin_t * dt],
+              [0, 1,  0.5 * V * cos_t * dt],
+              [0, 0, 1]]
+        # compute Gu -> (2, 3)
+        Gu = [[0.5 * cos_t * dt, -0.5 * V * np.sin(th) * dt * dt],
+              [0.5 * sin_t * dt,  0.5 * V * np.cos(th) * dt * dt],
+              [0, dt]]
 
+    else:
+        # regular
+        th = th_prev + om * dt
+        # pre-calculate
+        sin_th = np.sin(th)
+        sin_th_p = np.sin(th_prev)
+        cos_th = np.cos(th)
+        cos_th_p = np.cos(th_prev)
+        om_inv = 1.0 / om
+        V_om_inv = V * om_inv
+        # compute g
+        x = (x_prev) + V_om_inv * (sin_th - sin_th_p)
+        y = (y_prev) + V_om_inv * (cos_th_p - cos_th)
+        # compute Gx -> (3, 3)
+        Gx = [[1, 0, V_om_inv * (cos_th - cos_th_p)],
+              [0, 1, V_om_inv * (sin_th - sin_th_p)],
+              [0, 0, 1]]
+        # comput Gu -> (2, 3)
+        Gu = [[om_inv * (sin_th - sin_th_p),
+               V * (om_inv**2 * (sin_th_p - sin_th) + om_inv * cos_th * dt)],
+              [om_inv * (cos_th_p - cos_th),
+               V * (om_inv**2 * (cos_th - cos_th_p) + om_inv * sin_th * dt)],
+              [0, 1]]
 
+    g = np.array([x, y, th])
+    Gx = np.array(Gx)
+    Gu = np.array(Gu)
     ########## Code ends here ##########
 
     if not compute_jacobians:
@@ -55,6 +100,8 @@ def transform_line_to_scanner_frame(line, x, tf_base_to_camera, compute_jacobian
     #       a camera frame with origin at x_cam, y_cam rotated by th_cam wrt to the world frame
     # HINT: What is the projection of the camera location (x_cam, y_cam) on the line r? 
     # HINT: To find Hx, write h in terms of the pose of the base in world frame (x_base, y_base, th_base)
+    t = np.linalg.norm([x, tf_base_to_camera])
+    
 
 
     ########## Code ends here ##########
