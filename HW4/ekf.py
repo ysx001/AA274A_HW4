@@ -41,8 +41,8 @@ class Ekf(object):
 
         ########## Code starts here ##########
         # TODO: Update self.x, self.Sigma.
-
-
+        self.x = g      
+        self.Sigma = np.dot(np.dot(Gx, self.Sigma), Gx.T) + dt * np.dot(np.dot(Gu, self.R), Gu.T)
         ########## Code ends here ##########
 
     def transition_model(self, u, dt):
@@ -81,8 +81,10 @@ class Ekf(object):
 
         ########## Code starts here ##########
         # TODO: Update self.x, self.Sigma.
-
-
+        S = np.matmul(np.matmul(H, self.Sigma), H.T) + Q
+        K = np.matmul(np.matmul(self.Sigma, H.T), np.linalg.inv(S))
+        self.x += np.matmul(K, z)
+        self.Sigma -= np.matmul(np.matmul(K, S), K.T)
         ########## Code ends here ##########
 
     def measurement_model(self, z_raw, Q_raw):
@@ -134,8 +136,7 @@ class EkfLocalization(Ekf):
 
         ########## Code starts here ##########
         # TODO: Compute g, Gx, Gu using tb.compute_dynamics().
-
-
+        g, Gx, Gu = tb.compute_dynamics(self.x, u, dt)
         ########## Code ends here ##########
 
         return g, Gx, Gu
@@ -155,8 +156,9 @@ class EkfLocalization(Ekf):
         # TODO: Compute z, Q.
         # HINT: The scipy.linalg.block_diag() function may be useful.
         # HINT: A list can be unpacked using the * (splat) operator. 
-
-
+        z = np.concatenate(v_list, axis=0)
+        Q = scipy.linalg.block_diag(*Q_list)
+        H = np.concatenate(H_list, axis=0)
         ########## Code ends here ##########
 
         return z, Q, H
@@ -203,8 +205,28 @@ class EkfLocalization(Ekf):
         # HINT: For each of the I observed lines, 
         #       find the closest predicted line and the corresponding minimum Mahalanobis distance
         #       if the minimum distance satisfies the gating criteria, add corresponding entries to v_list, Q_list, H_list
+        _, I = z_raw.shape
+        _, J = hs.shape
+        
+        v_list = []
+        Q_list = []
+        H_list = []
 
-
+        for i in range(I):
+            z = z_raw[:, i]  # (2,1)
+            Q = Q_raw[i]     # (2,2)
+            min_dist = [self.g**2, None, None, None]
+            for j in range(J):
+                hs_j = hs[:, j]
+                v = np.array([angle_diff(z[0], hs_j[0]), z[1] - hs_j[1]])
+                s = np.matmul(np.matmul(Hs[j], self.Sigma), Hs[j].T) + Q
+                d = np.matmul(np.matmul(v.T, np.linalg.inv(s)), v)
+                if d < min_dist[0]:
+                    min_dist = [d, v, Q, Hs[j]]
+            if min_dist[1] is not None:
+                v_list.append(min_dist[1])
+                Q_list.append(min_dist[2])
+                H_list.append(min_dist[3])
         ########## Code ends here ##########
 
         return v_list, Q_list, H_list
@@ -227,7 +249,9 @@ class EkfLocalization(Ekf):
             ########## Code starts here ##########
             # TODO: Compute h, Hx using tb.transform_line_to_scanner_frame() for the j'th map line.
             # HINT: This should be a single line of code.
-
+            h, Hx = tb.transform_line_to_scanner_frame(self.map_lines[:, j],
+                                                       self.x,
+                                                       self.tf_base_to_camera)
 
             ########## Code ends here ##########
 
@@ -330,7 +354,7 @@ class EkfSlam(Ekf):
         # TODO: Compute v_list, Q_list, H_list.
         # HINT: Should be almost identical to EkfLocalization.compute_innovations(). What is J now?
         # HINT: Instead of getting world-frame line parameters from self.map_lines, you must extract them from the state self.x.
-
+        
 
         ########## Code ends here ##########
 

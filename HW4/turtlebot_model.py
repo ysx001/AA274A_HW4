@@ -63,7 +63,7 @@ def compute_dynamics(xvec, u, dt, compute_jacobians=True):
                V * (om_inv**2 * (sin_th_p - sin_th) + om_inv * cos_th * dt)],
               [om_inv * (cos_th_p - cos_th),
                V * (om_inv**2 * (cos_th - cos_th_p) + om_inv * sin_th * dt)],
-              [0, 1]]
+              [0, dt]]
 
     g = np.array([x, y, th])
     Gx = np.array(Gx)
@@ -92,18 +92,37 @@ def transform_line_to_scanner_frame(line, x, tf_base_to_camera, compute_jacobian
     """
     alpha, r = line
 
-    ########## Code starts here ##########
+    ######1#### Code starts here ##########
     # TODO: Compute h, Hx
-    # HINT: Calculate the pose of the camera in the world frame (x_cam, y_cam, th_cam), a rotation matrix may be useful.
+    # HINT: Calculate the pose of the camera in the world frame (x_cam, y_cam, th_cam), 
+    #       a rotation matrix may be useful.
     # HINT: To compute line parameters in the camera frame h = (alpha_in_cam, r_in_cam), 
     #       draw a diagram with a line parameterized by (alpha,r) in the world frame and 
     #       a camera frame with origin at x_cam, y_cam rotated by th_cam wrt to the world frame
     # HINT: What is the projection of the camera location (x_cam, y_cam) on the line r? 
-    # HINT: To find Hx, write h in terms of the pose of the base in world frame (x_base, y_base, th_base)
-    t = np.linalg.norm([x, tf_base_to_camera])
+    # HINT: To find Hx, write h in terms of the pose of the base 
+    #                   in world frame (x_base, y_base, th_base)
     
+    # calculate pose of camera in world frame
+    # t = np.linalg.norm([x, tf_base_to_camera])
+    x_world, y_world, th_world = x[0], x[1], x[2] 
+    R = [
+        [np.cos(th_world), -np.sin(th_world), 0],
+        [np.sin(th_world), np.cos(th_world), 0],
+        [0, 0, 1]
+    ]
 
+    cam_pose = x + np.dot(R, tf_base_to_camera)
+    x_cam, y_cam, th_cam = cam_pose[0], cam_pose[1], cam_pose[2]
 
+    h = np.array([alpha - th_cam,
+                  r - x_cam * np.cos(alpha) - y_cam * np.sin(alpha)])
+    x_base_cam, y_base_cam, _ = tf_base_to_camera
+    temp =  np.cos(alpha) * (np.sin(th_world) * x_base_cam + y_base_cam * np.cos(th_world))
+    temp += np.sin(alpha) * (-np.cos(th_world) * x_base_cam + np.sin(th_world) * y_base_cam)
+
+    Hx = np.array([[0, 0, -1],
+                   [-np.cos(alpha), -np.sin(alpha), temp]])
     ########## Code ends here ##########
 
     if not compute_jacobian:

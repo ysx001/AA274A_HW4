@@ -51,6 +51,7 @@ def validate_ekf_transition_update(show_plot=True):
     # Simulate controls
     open_loop_states = np.zeros((T, ekf_loc.x.shape[0]))
     open_loop_states[0] = ekf_loc.x
+    
     for i in range(T - 1):
         ekf_loc.transition_update(u[i], dt[i])
         open_loop_states[i+1] = ekf_loc.x
@@ -313,14 +314,13 @@ def validate_ekf_slam():
 
 if __name__ == '__main__':
     ### PROBLEM 1
-    validate_ekf_transition_update()
+    validate_ekf_transition_update() # P1iii
     validate_ekf_localization()
 
     ## Subcomponent validation
-    validate_localization_transition_model()
+    validate_localization_transition_model() # P1ii
     validate_localization_compute_predicted_measurements()
     validate_localization_compute_innovations()
 
     ### PROBLEM 2
-
-    validate_ekf_slam()
+    # validate_ekf_slam()
