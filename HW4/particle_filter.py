@@ -59,13 +59,11 @@ class ParticleFilter(object):
         # TODO: Update self.xs.
         # Hint: Call self.transition_model().
         # Hint: You may find np.random.multivariate_normal useful.
-        # print(u)
-        us = np.array([u,]*self.M)
-        # print(us)
-        new_means = self.transition_model(us,dt)
-        # new_x = np.zeros_like(self.xs)
-        for i in range(self.M):
-            self.xs[i,:] = np.random.multivariate_normal(new_means[i,:],np.eye(3))
+        epsilon = np.random.multivariate_normal(mean=np.zeros_like(u),
+                                                cov=self.R * np.array(dt),
+                                                size=self.M)
+        us = np.array([u,] * self.M) + epsilon
+        self.xs = self.transition_model(us, dt)
         ########## Code ends here ##########
 
     def transition_model(self, us, dt):
@@ -120,10 +118,10 @@ class ParticleFilter(object):
         #       without for loops. You may find np.linspace(), np.cumsum(), and
         #       np.searchsorted() useful. This results in a ~10x speedup.
         cum_weight = np.cumsum(ws)
-        u = cum_weight[-1] * (r + \
-            np.linspace(start=0, stop=1, num=self.M, endpoint=False))
-        idx_list = np.searchsorted(cum_weight, u)
-        self.xs = xs[idx_list]
+        m = np.linspace(start=0, stop=self.M, num=self.M, endpoint=False)
+        idx_list = np.searchsorted(cum_weight,
+                                   cum_weight[-1] * (r + m / self.M))
+        self.xs = xs[idx_list, :]
         self.ws = ws[idx_list]
         ########## Code ends here ##########
 
@@ -190,15 +188,40 @@ class MonteCarloLocalization(ParticleFilter):
         #       not call tb.compute_dynamics. You need to compute the idxs
         #       where abs(om) > EPSILON_OMEGA and the other idxs, then do separate 
         #       updates for them
-        M = us.shape[0]
-        g = np.zeros_like(self.xs)
-        for i in range(M):
-            state_val = self.xs[i,:]
-            u_val = us[i,:]
-            new_state = tb.compute_dynamics(state_val,u_val,dt,compute_jacobians=False)
-            g[i,:] = new_state 
-        ########## Code ends here ##########
 
+        ########## Code ends here ##########
+        def limit_g(us, dt):
+            x, y, theta = self.xs[:, 0], self.xs[:, 1], self.xs[:, 2]
+            V, om = us[:, 0], us[:, 1]
+            sin_t = np.sin(theta) + np.sin(theta + om * dt)
+            cos_t = np.cos(theta) + np.cos(theta + om * dt)
+
+            x_new = x + 0.5 * V * cos_t * dt
+            y_new = y + 0.5 * V * sin_t * dt
+            theta_new = theta + om * dt
+
+            return np.stack((x_new, y_new, theta_new), axis=-1)
+
+        def regular_g(us, dt):
+            x, y, theta = self.xs[:, 0], self.xs[:, 1], self.xs[:, 2]
+            V, om = us[:, 0], us[:, 1]
+
+            theta_new = theta + om * dt
+            sin_th = np.sin(theta_new)
+            sin_th_p = np.sin(theta)
+            cos_th = np.cos(theta_new)
+            cos_th_p = np.cos(theta)
+            om_inv = 1.0 / np.maximum(np.abs(om), EPSILON_OMEGA) * np.sign(om)
+            V_om_inv = V * om_inv
+            # compute g
+            x_new = x + V_om_inv * (sin_th - sin_th_p)
+            y_new = y + V_om_inv * (cos_th_p - cos_th)
+
+            return np.stack((x_new, y_new, theta_new), axis=-1)
+
+        g = np.where(np.expand_dims(np.abs(us[:, 1]), axis=1) < EPSILON_OMEGA,
+                     limit_g(us, dt),
+                     regular_g(us, dt))
         return g
 
     def measurement_update(self, z_raw, Q_raw):
@@ -249,8 +272,6 @@ class MonteCarloLocalization(ParticleFilter):
         # TODO: Compute Q.
         # Hint: You might find scipy.linalg.block_diag() useful
         Q = scipy.linalg.block_diag(*Q_raw)
-
-
         ########## Code ends here ##########
 
         return vs, Q
@@ -300,19 +321,20 @@ class MonteCarloLocalization(ParticleFilter):
         I = Q_raw.shape[0]
         J = self.map_lines.shape[1]
         
-        s_data = self.compute_predicted_measurements()
+        hs = self.compute_predicted_measurements()
         vs = np.zeros((self.M,I,2))
         for m in range(self.M): # M
             for i in range(I): # I
                 d = None
                 best_vij = None
                 for j in range(J): # J
-                    vij =  np.array([angle_diff(s_data[m, 0, j], z_raw[0,i]), s_data[m, 1, j] - z_raw[1,i]])
+                    vij =  np.array([angle_diff(z_raw[0,i], hs[m, 0, j]),
+                                     z_raw[1,i] - hs[m, 1, j]])
                     new_d = vij@np.linalg.inv(Q_raw[i])@vij.T
                     if d is None or new_d < d:
                         d = new_d
                         best_vij = vij
-                vs[m,i,:] = -1*best_vij
+                vs[m,i,:] = best_vij
         ########## Code ends here ##########
 
         # Reshape [M x I x 2] array to [M x 2I]
@@ -342,8 +364,7 @@ class MonteCarloLocalization(ParticleFilter):
         # Hint: For the faster solution, it does not call tb.transform_line_to_scanner_frame()
         #       or tb.normalize_line_parameters(), but reimplement these steps vectorized.
         J = self.map_lines.shape[1]
-        hs = np.zeros((self.M,2,J))
-
+        hs = np.zeros((self.M, 2, J))
         for m in range(self.M):
             for j in range(J):
                 h = tb.transform_line_to_scanner_frame(self.map_lines[:, j],
