@@ -313,14 +313,14 @@ def validate_ekf_slam():
 
 
 if __name__ == '__main__':
-    ### PROBLEM 1
-    validate_ekf_transition_update() # P1iii
-    validate_ekf_localization()
+    # ### PROBLEM 1
+    # validate_ekf_transition_update() # P1iii
+    # validate_ekf_localization()
 
-    ## Subcomponent validation
-    validate_localization_transition_model() # P1ii
-    validate_localization_compute_predicted_measurements()
-    validate_localization_compute_innovations()
+    # ## Subcomponent validation
+    # validate_localization_transition_model() # P1ii
+    # validate_localization_compute_predicted_measurements()
+    # validate_localization_compute_innovations()
 
     ### PROBLEM 2
-    # validate_ekf_slam()
+    validate_ekf_slam()

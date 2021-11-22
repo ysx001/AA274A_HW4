@@ -297,8 +297,36 @@ class EkfSlam(Ekf):
         # TODO: Compute g, Gx, Gu.
         # HINT: This should be very similar to EkfLocalization.transition_model() and take 1-5 lines of code.
         # HINT: Call tb.compute_dynamics() with the correct elements of self.x
+        # J = (self.x.size - 3) // 2
+        # x = self.x
 
+        
 
+        # print("before")
+        #print(g.shape)
+        #print(Gx.shape)
+        #print(Gu.shape)
+
+        # g, Gx, Gu = tb.compute_dynamics(x, u, dt)
+
+        # for j in range(J):
+        #     idx_j = 3 + 2 * j
+        #     alpha, r = self.x[idx_j:idx_j+2]
+        #     g = np.append(g, alpha)
+        #     g = np.append(g, r)
+            
+
+        # print("after")
+        # print(g.shape)
+        # print(Gx.shape)
+        # print(Gu.shape)
+
+        g_prime = g[0:3]
+
+        new_g, new_Gx, new_Gu = tb.compute_dynamics(g_prime, u, dt)
+        g[0:3] = new_g
+        Gx[0:3, 0:3] = new_Gx
+        Gu[0:3, :] = new_Gu
         ########## Code ends here ##########
 
         return g, Gx, Gu
@@ -324,8 +352,9 @@ class EkfSlam(Ekf):
         ########## Code starts here ##########
         # TODO: Compute z, Q, H.
         # Hint: Should be identical to EkfLocalization.measurement_model().
-
-
+        z = np.concatenate(v_list, axis=0)
+        Q = scipy.linalg.block_diag(*Q_list)
+        H = np.concatenate(H_list, axis=0)
         ########## Code ends here ##########
 
         return z, Q, H
@@ -354,8 +383,28 @@ class EkfSlam(Ekf):
         # TODO: Compute v_list, Q_list, H_list.
         # HINT: Should be almost identical to EkfLocalization.compute_innovations(). What is J now?
         # HINT: Instead of getting world-frame line parameters from self.map_lines, you must extract them from the state self.x.
+        _, I = z_raw.shape
+        _, J = hs.shape
         
+        v_list = []
+        Q_list = []
+        H_list = []
 
+        for i in range(I):
+            z = z_raw[:, i]  # (2,1)
+            Q = Q_raw[i]     # (2,2)
+            min_dist = [self.g**2, None, None, None]
+            for j in range(J):
+                hs_j = hs[:, j]
+                v = np.array([angle_diff(z[0], hs_j[0]), z[1] - hs_j[1]])
+                s = np.matmul(np.matmul(Hs[j], self.Sigma), Hs[j].T) + Q
+                d = np.matmul(np.matmul(v.T, np.linalg.inv(s)), v)
+                if d < min_dist[0]:
+                    min_dist = [d, v, Q, Hs[j]]
+            if min_dist[1] is not None:
+                v_list.append(min_dist[1])
+                Q_list.append(min_dist[2])
+                H_list.append(min_dist[3])
         ########## Code ends here ##########
 
         return v_list, Q_list, H_list
@@ -379,12 +428,31 @@ class EkfSlam(Ekf):
             # HINT: The first 3 columns of Hx should be populated using the same approach as in EkfLocalization.compute_predicted_measurements().
             # HINT: The first two map lines (j=0,1) are fixed so the Jacobian of h wrt the alpha and r for those lines is just 0. 
             # HINT: For the other map lines (j>2), write out h in terms of alpha and r to get the Jacobian Hx.
+            h, Hx_temp = tb.transform_line_to_scanner_frame([alpha, r],
+                                                    self.x[0:3],
+                                                    self.tf_base_to_camera)
 
+            # print("orig ", Hx.shape)
+            # print("temp ", Hx_temp.shape)
 
+            Hx[:, 0:3] = Hx_temp
+                            
             # First two map lines are assumed fixed so we don't want to propagate
             # any measurement correction to them.
             if j >= 2:
                 Hx[:,idx_j:idx_j+2] = np.eye(2)  # FIX ME!
+
+                # additional term
+                x_world, y_world, th_world = self.x[0], self.x[1], self.x[2] 
+                R = [
+                    [np.cos(th_world), -np.sin(th_world), 0],
+                    [np.sin(th_world), np.cos(th_world), 0],
+                    [0, 0, 1]
+                ]
+
+                cam_pose = self.x[0:3] + np.dot(R, self.tf_base_to_camera)
+                x_cam, y_cam, th_cam = cam_pose[0], cam_pose[1], cam_pose[2]
+                Hx[1,idx_j] = x_cam*np.sin(alpha) - y_cam*np.cos(alpha)
             ########## Code ends here ##########
 
             h, Hx = tb.normalize_line_parameters(h, Hx)

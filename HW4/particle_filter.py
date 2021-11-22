@@ -59,8 +59,13 @@ class ParticleFilter(object):
         # TODO: Update self.xs.
         # Hint: Call self.transition_model().
         # Hint: You may find np.random.multivariate_normal useful.
-
-
+        # print(u)
+        us = np.array([u,]*self.M)
+        # print(us)
+        new_means = self.transition_model(us,dt)
+        # new_x = np.zeros_like(self.xs)
+        for i in range(self.M):
+            self.xs[i,:] = np.random.multivariate_normal(new_means[i,:],np.eye(3))
         ########## Code ends here ##########
 
     def transition_model(self, us, dt):
@@ -114,8 +119,12 @@ class ParticleFilter(object):
         # Hint: To maximize speed, try to implement the resampling algorithm
         #       without for loops. You may find np.linspace(), np.cumsum(), and
         #       np.searchsorted() useful. This results in a ~10x speedup.
-
-
+        cum_weight = np.cumsum(ws)
+        u = cum_weight[-1] * (r + \
+            np.linspace(start=0, stop=1, num=self.M, endpoint=False))
+        idx_list = np.searchsorted(cum_weight, u)
+        self.xs = xs[idx_list]
+        self.ws = ws[idx_list]
         ########## Code ends here ##########
 
     def measurement_model(self, z_raw, Q_raw):
@@ -181,8 +190,13 @@ class MonteCarloLocalization(ParticleFilter):
         #       not call tb.compute_dynamics. You need to compute the idxs
         #       where abs(om) > EPSILON_OMEGA and the other idxs, then do separate 
         #       updates for them
-
-
+        M = us.shape[0]
+        g = np.zeros_like(self.xs)
+        for i in range(M):
+            state_val = self.xs[i,:]
+            u_val = us[i,:]
+            new_state = tb.compute_dynamics(state_val,u_val,dt,compute_jacobians=False)
+            g[i,:] = new_state 
         ########## Code ends here ##########
 
         return g
@@ -209,8 +223,8 @@ class MonteCarloLocalization(ParticleFilter):
         #       particles. You may find scipy.stats.multivariate_normal.pdf()
         #       useful.
         # Hint: You'll need to call self.measurement_model()
-
-
+        vs, Q = self.measurement_model(z_raw, Q_raw)
+        ws = scipy.stats.multivariate_normal.pdf(vs, mean=None, cov=Q)
         ########## Code ends here ##########
 
         self.resample(xs, ws)
@@ -234,6 +248,7 @@ class MonteCarloLocalization(ParticleFilter):
         ########## Code starts here ##########
         # TODO: Compute Q.
         # Hint: You might find scipy.linalg.block_diag() useful
+        Q = scipy.linalg.block_diag(*Q_raw)
 
 
         ########## Code ends here ##########
@@ -282,8 +297,22 @@ class MonteCarloLocalization(ParticleFilter):
         #       Overall, that's 100x!
         # Hint: For the faster solution, you might find np.expand_dims(), 
         #       np.linalg.solve(), np.meshgrid() useful.
-
-
+        I = Q_raw.shape[0]
+        J = self.map_lines.shape[1]
+        
+        s_data = self.compute_predicted_measurements()
+        vs = np.zeros((self.M,I,2))
+        for m in range(self.M): # M
+            for i in range(I): # I
+                d = None
+                best_vij = None
+                for j in range(J): # J
+                    vij =  np.array([angle_diff(s_data[m, 0, j], z_raw[0,i]), s_data[m, 1, j] - z_raw[1,i]])
+                    new_d = vij@np.linalg.inv(Q_raw[i])@vij.T
+                    if d is None or new_d < d:
+                        d = new_d
+                        best_vij = vij
+                vs[m,i,:] = -1*best_vij
         ########## Code ends here ##########
 
         # Reshape [M x I x 2] array to [M x 2I]
@@ -312,8 +341,17 @@ class MonteCarloLocalization(ParticleFilter):
         #       results in a ~10x speedup.
         # Hint: For the faster solution, it does not call tb.transform_line_to_scanner_frame()
         #       or tb.normalize_line_parameters(), but reimplement these steps vectorized.
+        J = self.map_lines.shape[1]
+        hs = np.zeros((self.M,2,J))
 
-
+        for m in range(self.M):
+            for j in range(J):
+                h = tb.transform_line_to_scanner_frame(self.map_lines[:, j],
+                                                       self.xs[m],
+                                                       self.tf_base_to_camera,
+                                                       compute_jacobian=False)
+                h = tb.normalize_line_parameters(h)
+                hs[m,:,j] = h
         ########## Code ends here ##########
 
         return hs
